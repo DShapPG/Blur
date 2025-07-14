@@ -1,7 +1,8 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
 import io
-from ImageService import detect_logo
+from DetectImage import detect_logo
+from BlurImage import draw_rectangle
 
 app = FastAPI()
 
@@ -13,8 +14,12 @@ def read_root():
 
 @app.post("/image")
 async def post_image(file: UploadFile = File(...)):
-    # считываем присланные байты
-    content = await file.read()
-    detected_image = detect_logo(content)
-    # отдаём их обратно потоком
-    return JSONResponse(content=detected_image)
+    try:
+        content = await file.read()
+        image_info = detect_logo(content)
+        if not image_info.get("predictions"):
+            return JSONResponse(content={"error": "Logo wasn't found"}, status_code=400)
+        rectangle = draw_rectangle(content, image_info)
+        return StreamingResponse(io.BytesIO(rectangle), media_type="image/png")
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
