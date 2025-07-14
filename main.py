@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
 import io
+from ImageService import detect_logo
 
 app = FastAPI()
 
@@ -14,9 +15,6 @@ def read_root():
 async def post_image(file: UploadFile = File(...)):
     # считываем присланные байты
     content = await file.read()
-
+    detected_image = detect_logo(content)
     # отдаём их обратно потоком
-    return StreamingResponse(
-        io.BytesIO(content),              # превращаем bytes в «поток»
-        media_type=file.content_type      # сохраняем исходный MIME-тип
-    )
+    return JSONResponse(content=detected_image)
